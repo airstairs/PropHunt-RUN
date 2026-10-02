@@ -497,49 +497,86 @@
 
         function spawnAndroidGroundStamp(hitCount) {
             const stampGroup = new THREE.Group();
-            const darkToneMat = new THREE.MeshBasicMaterial({ color: 0x2f6327 }); // Slightly darker than grass 0x3b7a32
 
-            // Android Head (Half sphere dome layout flat against the ground)
-            const headGeo = new THREE.SphereGeometry(1.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-            const head = new THREE.Mesh(headGeo, darkToneMat);
-            head.rotation.x = Math.PI; // flatten against ground
-            head.scale.set(1, 0.25, 0.85);
-            stampGroup.add(head);
+            // Pole structure
+            const poleGeo = new THREE.CylinderGeometry(0.04, 0.04, 2.2, 8);
+            const poleMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+            const leftPole = new THREE.Mesh(poleGeo, poleMat);
+            leftPole.position.set(-1.1, 1.1, 0);
+            stampGroup.add(leftPole);
 
-            // Left & Right Antennae
-            const antennaGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.5, 6);
-            const leftAntenna = new THREE.Mesh(antennaGeo, darkToneMat);
-            leftAntenna.position.set(-0.5, 0.15, -0.6);
-            leftAntenna.rotation.z = -Math.PI / 6;
-            stampGroup.add(leftAntenna);
+            const rightPole = new THREE.Mesh(poleGeo, poleMat);
+            rightPole.position.set(1.1, 1.1, 0);
+            stampGroup.add(rightPole);
 
-            const rightAntenna = new THREE.Mesh(antennaGeo, darkToneMat);
-            rightAntenna.position.set(0.5, 0.15, -0.6);
-            rightAntenna.rotation.z = Math.PI / 6;
-            stampGroup.add(rightAntenna);
+            const topBarGeo = new THREE.CylinderGeometry(0.03, 0.03, 2.2, 8);
+            const topBar = new THREE.Mesh(topBarGeo, poleMat);
+            topBar.rotation.z = Math.PI / 2;
+            topBar.position.set(0, 2.1, 0);
+            stampGroup.add(topBar);
 
-            // Dynamic Canvas Texture for Number Text (10, 20, 30...)
+            // Create wavy wind-blowing flag geometry using subdivided PlaneGeometry (width segments = 8)
+            const flagWidthSegments = 8;
+            const flagGeo = new THREE.PlaneGeometry(2.2, 1.3, flagWidthSegments, 4);
+
             const canvas = document.createElement('canvas');
-            canvas.width = 128;
+            canvas.width = 256;
             canvas.height = 128;
             const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 128, 128);
-            ctx.fillStyle = '#2f6327';
-            ctx.font = 'bold 56px Arial';
+            
+            // Solid clean white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 256, 128);
+
+            // Official green Android HEAD logo (face, eyes, and antennas only) centered at top
+            ctx.fillStyle = '#3ddc84';
+            
+            // Head semi-circle
+            ctx.beginPath();
+            ctx.arc(128, 48, 34, Math.PI, 0, false);
+            ctx.fill();
+
+            // Antennas
+            ctx.strokeStyle = '#3ddc84';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(106, 24);
+            ctx.lineTo(92, 10);
+            ctx.moveTo(150, 24);
+            ctx.lineTo(164, 10);
+            ctx.stroke();
+
+            // Eyes (white dots on green head)
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(114, 42, 4.5, 0, Math.PI * 2);
+            ctx.arc(142, 42, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hot Pink & Dark Pink gradient for the milestone number text below the head logo
+            const textGrad = ctx.createLinearGradient(0, 75, 0, 120);
+            textGrad.addColorStop(0, '#ff1493'); // Deep Hot Pink
+            textGrad.addColorStop(1, '#c71585'); // Medium Dark Pink
+
+            ctx.fillStyle = textGrad;
+            ctx.font = '900 46px Arial Black, sans-serif';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(hitCount, 64, 64);
+            ctx.textBaseline = 'bottom';
+            ctx.shadowColor = 'rgba(0,0,0,0.25)';
+            ctx.shadowBlur = 5;
+            ctx.fillText(hitCount, 128, 122);
 
-            const textTexture = new THREE.CanvasTexture(canvas);
-            const textMat = new THREE.MeshBasicMaterial({ map: textTexture, transparent: true, depthWrite: false });
-            const textPlaneGeo = new THREE.PlaneGeometry(1.4, 1.4);
-            const textMesh = new THREE.Mesh(textPlaneGeo, textMat);
-            textMesh.rotation.x = -Math.PI / 2;
-            textMesh.position.set(0, 0.03, 0.05);
-            stampGroup.add(textMesh);
+            const flagTexture = new THREE.CanvasTexture(canvas);
+            const flagMat = new THREE.MeshBasicMaterial({ map: flagTexture, side: THREE.DoubleSide, transparent: true });
+            const flagMesh = new THREE.Mesh(flagGeo, flagMat);
+            flagMesh.position.set(0, 1.45, 0);
+            stampGroup.add(flagMesh);
 
-            // Place logo off to the side on the grass, spawned far ahead down the track
-            const sideOffset = (Math.random() < 0.5 ? -1 : 1) * (3.8 + Math.random() * 2.0);
+            // Store reference for wind flutter animation in render loop
+            stampGroup.userData = { flagMesh: flagMesh, flagGeo: flagGeo, widthSegments: flagWidthSegments, timeOffset: Math.random() * 10 };
+
+            const sideOffset = (Math.random() < 0.5 ? -1 : 1) * (4.2 + Math.random() * 1.5);
             stampGroup.position.set(sideOffset, 0.02, -120);
             scene.add(stampGroup);
 
@@ -737,8 +774,24 @@
                     }
                 });
 
+                // Animate wind blowing flutter effect on flags
+                const animTime = time * 0.006;
                 androidStamps.forEach((stamp, index) => {
                     stamp.position.z += currentRunSpeed * delta;
+
+                    if (stamp.userData && stamp.userData.flagGeo) {
+                        const posAttr = stamp.userData.flagGeo.attributes.position;
+                        const tOff = stamp.userData.timeOffset;
+
+                        for (let i = 0; i <= posAttr.count; i++) {
+                            const x = posAttr.getX(i);
+                            const distFromPole = Math.max(0, x + 1.1); 
+                            const wave = Math.sin(animTime * 4.0 + distFromPole * 3.5 + tOff) * 0.08 * distFromPole;
+                            posAttr.setZ(i, wave);
+                        }
+                        posAttr.needsUpdate = true;
+                    }
+
                     if (stamp.position.z > 10) {
                         removeAndClearGroup(stamp);
                         androidStamps.splice(index, 1);
@@ -833,7 +886,6 @@
                                 score += 100;
                                 scoreValEl.textContent = score;
 
-                                // Increment target hit tracker and check for every 10 hits milestone
                                 targetHitsCount++;
                                 if (targetHitsCount % 10 === 0) {
                                     spawnAndroidGroundStamp(targetHitsCount);
