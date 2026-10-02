@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PropHunt-RUN</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: none;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #050b14;
+            transition: background-color 0.5s ease;
+        }
+
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+            z-index: 10;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        #health-container {
+            color: #2ecc71;
+        }
+
+        #score-container {
+            color: #f1c40f;
+        }
+
+        #button-container {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .toggle-btn {
+            padding: 8px 14px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .toggle-btn.active {
+            background: rgba(46, 204, 113, 0.8);
+            border-color: #2ecc71;
+        }
+
+        #damage-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(231, 76, 60, 0);
+            pointer-events: none;
+            z-index: 15;
+            transition: background 0.15s ease;
+        }
+
+        #wasted-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 30;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #wasted-text {
+            font-family: 'Impact', sans-serif;
+            font-size: 70px;
+            color: #b30000;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px black, 0 0 20px black;
+        }
+
+        #restart-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            background: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #action-btn-container {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .action-circle-btn {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        #jump-btn {
+            background: rgba(52, 152, 219, 0.85);
+        }
+
+        #duck-btn {
+            background: rgba(241, 196, 15, 0.85);
+            color: #ffffff;
+        }
+
+        .action-circle-btn:active {
+            transform: scale(0.92);
+        }
+
+        #instructions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            color: white;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 20;
+        }
+
+        #menu-title {
+            font-family: 'Impact', sans-serif;
+            font-size: 70px;
+            color: #f1c40f;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px black;
+            margin-bottom: 20px;
+        }
+
+        #start-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #2ecc71;
+            color: white;
+            border: 2px solid #27ae60;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div>PropHunt-RUN</div>
+        <div id="health-container">HEALTH: <span id="health-val">100</span></div>
+        <div id="score-container">SCORE: <span id="score-val">0</span></div>
+    </div>
+
+    <div id="button-container">
+        <button id="night-mode-btn" class="toggle-btn active">NIGHT MODE</button>
+    </div>
+
+    <div id="damage-flash"></div>
+
+    <div id="wasted-screen">
+        <div id="wasted-text">GAME OVER</div>
+        <button id="restart-btn" onclick="location.reload()">PLAY AGAIN</button>
+    </div>
+
+    <div id="action-btn-container">
+        <button id="duck-btn" class="action-circle-btn">DUCK</button>
+        <button id="jump-btn" class="action-circle-btn">JUMP</button>
+    </div>
+
+    <div id="instructions">
+        <div id="menu-title">PropHunt-RUN</div>
+        <p style="max-width: 320px; margin-bottom: 25px; line-height: 1.5;">
+            Auto-run down the infinite track!<br>
+            • Tap DUCK or JUMP for obstacles.<br>
+            • Tap screen directly to throw knives at targets!
+        </p>
+        <button id="start-btn">RUN!</button>
+    </div>
+
+    <script src="three.min.js"></script>
+
+    <script>
+        let scene, camera, renderer;
+        let groundSegments = [];
+        let obstacles = [];
+        let targets = [];
+        let flyingKnives = [];
+        let androidStamps = [];
+
+        let targetHitsCount = 0;
+
+        let ambientLight, sunLight, flashlight, headLight, headLightTarget;
+        let nightSkyGroup, starsPoints, starGeo, starPhases, starBaseSizes;
+        let isNightMode = true; 
+        let isDead = false;
+        let isGameStarted = false;
+
+        let playerHealth = 100;
+        let score = 0;
+        const healthValEl = document.getElementById('health-val');
+        const scoreValEl = document.getElementById('score-val');
+        const damageFlashEl = document.getElementById('damage-flash');
+        const wastedScreen = document.getElementById('wasted-screen');
+
+        let baseRunSpeed = 24;
+        let speedMultiplier = 1.0;
+        let elapsedTime = 0;
+
+        let playerY = 1.6;
+        let playerYVelocity = 0;
+        let isJumping = false;
+        let isDucking = false;
+        let duckTimer = 0;
+
+        const PLAYER_NORMAL_HEIGHT = 1.6;
+        const PLAYER_DUCK_HEIGHT = 0.8;
+        const JUMP_FORCE = 8.5;
+        const GRAVITY = 22;
+
+        let spawnTimer = 0;
+        let prevTime = performance.now();
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        const instructions = document.getElementById('instructions');
+        const startBtn = document.getElementById('start-btn');
+        const jumpBtn = document.getElementById('jump-btn');
+        const duckBtn = document.getElementById('duck-btn');
+        const nightModeBtn = document.getElementById('night-mode-btn');
+
+        // Shared Geometries and Materials
+        const groundGeo = new THREE.PlaneGeometry(18, 30);
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x3b7a32 });
+        const pathGeo = new THREE.PlaneGeometry(7, 30);
+        const pathMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+
+        const logGeo = new THREE.CylinderGeometry(0.5, 0.5, 5, 8);
+        const logMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
+
+        const branchGeo = new THREE.BoxGeometry(6, 0.6, 0.6);
+        const branchMat = new THREE.MeshLambertMaterial({ color: 0x3d2817 });
+
+        const targetRingGeos = [
+            new THREE.CylinderGeometry(1.0, 1.0, 0.1, 12),
+            new THREE.CylinderGeometry(0.7, 0.7, 0.1, 12),
+            new THREE.CylinderGeometry(0.4, 0.4, 0.1, 12)
+        ];
+        const targetRingMats = [
+            new THREE.MeshLambertMaterial({ color: 0xffffff }),
+            new THREE.MeshLambertMaterial({ color: 0xe74c3c }),
+            new THREE.MeshLambertMaterial({ color: 0xffffff })
+        ];
+
+        const knifeBladeMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+        const knifeBladeGeo = new THREE.BoxGeometry(0.07, 0.52, 0.015);
+        const knifeTipGeo = new THREE.ConeGeometry(0.035, 0.15, 4);
+        const knifeHandleGeo = new THREE.BoxGeometry(0.06, 0.38, 0.025);
+        const knifeHandleMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+        const knifeAccentGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.03, 8);
+        const knifeAccentMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+
+        init();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050b14);
+            scene.fog = new THREE.FogExp2(0x050b14, 0.012);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
+            camera.position.set(0, PLAYER_NORMAL_HEIGHT, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            renderer.shadowMap.enabled = false;
+            document.body.appendChild(renderer.domElement);
+
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+            scene.add(ambientLight);
+
+            sunLight = new THREE.DirectionalLight(0xfff8e7, 0.2);
+            sunLight.position.set(20, 40, -20);
+            scene.add(sunLight);
+
+            flashlight = new THREE.SpotLight(0xffffff, 4, 50, Math.PI / 5, 0.5);
+            scene.add(flashlight);
+
+            headLightTarget = new THREE.Object3D();
+            headLightTarget.position.set(0, 0, -18);
+            scene.add(headLightTarget);
+
+            headLight = new THREE.SpotLight(0xffeaad, 6.0, 35, Math.PI / 3.5, 0.7, 1.5);
+            headLight.position.set(0, 0.5, 0);
+            headLight.target = headLightTarget;
+            scene.add(headLight);
+
+            createNightEnvironment();
+            initInfiniteTrack();
+
+            startBtn.addEventListener('click', () => {
+                instructions.style.display = 'none';
+                isGameStarted = true;
+            });
+
+            jumpBtn.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                triggerJump();
+            });
+
+            duckBtn.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                triggerDuck();
+            });
+
+            nightModeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleNightMode();
+            });
+
+            window.addEventListener('pointerdown', (e) => {
+                if (!isGameStarted || isDead) return;
+                if (e.target.closest('#action-btn-container') || e.target.closest('#button-container') || e.target.closest('#instructions')) return;
+
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                throwAtTap(mouse.x, mouse.y);
+            });
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createNightEnvironment() {
+            nightSkyGroup = new THREE.Group();
+
+            const moonGeo = new THREE.SphereGeometry(6, 12, 12);
+            const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
+            const moon = new THREE.Mesh(moonGeo, moonMat);
+            moon.position.set(40, 60, -100);
+            nightSkyGroup.add(moon);
+
+            const starCount = 350;
+            starGeo = new THREE.BufferGeometry();
+            const starPositions = new Float32Array(starCount * 3);
+            const starSizes = new Float32Array(starCount);
+            starPhases = new Float32Array(starCount);
+            starBaseSizes = new Float32Array(starCount);
+
+            for (let i = 0; i < starCount; i++) {
+                starPositions[i * 3] = (Math.random() - 0.5) * 320;
+                starPositions[i * 3 + 1] = Math.random() * 90 + 10;
+                starPositions[i * 3 + 2] = -Math.random() * 220 - 20;
+
+                const baseSize = Math.random() * 2.2 + 1.2;
+                starBaseSizes[i] = baseSize;
+                starSizes[i] = baseSize;
+                starPhases[i] = Math.random() * Math.PI * 2;
+            }
+
+            starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+            starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.4, 'rgba(255,255,255,0.8)');
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 16, 16);
+
+            const starTexture = new THREE.CanvasTexture(canvas);
+            const starMat = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 2.5,
+                map: starTexture,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            starsPoints = new THREE.Points(starGeo, starMat);
+            nightSkyGroup.add(starsPoints);
+
+            nightSkyGroup.visible = true;
+            scene.add(nightSkyGroup);
+        }
+
+        function toggleNightMode() {
+            isNightMode = !isNightMode;
+            nightModeBtn.classList.toggle('active', isNightMode);
+
+            if (isNightMode) {
+                scene.background.set(0x050b14);
+                scene.fog.color.set(0x050b14);
+                ambientLight.intensity = 0.15;
+                sunLight.intensity = 0.2;
+                flashlight.intensity = 4;
+                headLight.intensity = 6.0;
+                nightSkyGroup.visible = true;
+            } else {
+                scene.background.set(0x5c93c4);
+                scene.fog.color.set(0x5c93c4);
+                ambientLight.intensity = 0.75;
+                sunLight.intensity = 1.1;
+                flashlight.intensity = 0;
+                headLight.intensity = 0;
+                nightSkyGroup.visible = false;
+            }
+        }
+
+        function initInfiniteTrack() {
+            for (let i = 0; i < 10; i++) {
+                spawnTrackSegment(-i * 30);
+            }
+        }
+
+        function spawnTrackSegment(zPos) {
+            const segGroup = new THREE.Group();
+
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            segGroup.add(ground);
+
+            const path = new THREE.Mesh(pathGeo, pathMat);
+            path.rotation.x = -Math.PI / 2;
+            path.position.y = 0.01;
+            segGroup.add(path);
+
+            segGroup.position.z = zPos;
+            scene.add(segGroup);
+            groundSegments.push(segGroup);
+        }
+
+        function spawnAndroidGroundStamp(hitCount) {
+            const stampGroup = new THREE.Group();
+            const darkToneMat = new THREE.MeshBasicMaterial({ color: 0x2f6327 }); // Slightly darker than grass 0x3b7a32
+
+            // Android Head (Half sphere dome layout flat against the ground)
+            const headGeo = new THREE.SphereGeometry(1.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+            const head = new THREE.Mesh(headGeo, darkToneMat);
+            head.rotation.x = Math.PI; // flatten against ground
+            head.scale.set(1, 0.25, 0.85);
+            stampGroup.add(head);
+
+            // Left & Right Antennae
+            const antennaGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.5, 6);
+            const leftAntenna = new THREE.Mesh(antennaGeo, darkToneMat);
+            leftAntenna.position.set(-0.5, 0.15, -0.6);
+            leftAntenna.rotation.z = -Math.PI / 6;
+            stampGroup.add(leftAntenna);
+
+            const rightAntenna = new THREE.Mesh(antennaGeo, darkToneMat);
+            rightAntenna.position.set(0.5, 0.15, -0.6);
+            rightAntenna.rotation.z = Math.PI / 6;
+            stampGroup.add(rightAntenna);
+
+            // Dynamic Canvas Texture for Number Text (10, 20, 30...)
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 128, 128);
+            ctx.fillStyle = '#2f6327';
+            ctx.font = 'bold 56px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(hitCount, 64, 64);
+
+            const textTexture = new THREE.CanvasTexture(canvas);
+            const textMat = new THREE.MeshBasicMaterial({ map: textTexture, transparent: true, depthWrite: false });
+            const textPlaneGeo = new THREE.PlaneGeometry(1.4, 1.4);
+            const textMesh = new THREE.Mesh(textPlaneGeo, textMat);
+            textMesh.rotation.x = -Math.PI / 2;
+            textMesh.position.set(0, 0.03, 0.05);
+            stampGroup.add(textMesh);
+
+            // Place logo off to the side on the grass, spawned far ahead down the track
+            const sideOffset = (Math.random() < 0.5 ? -1 : 1) * (3.8 + Math.random() * 2.0);
+            stampGroup.position.set(sideOffset, 0.02, -120);
+            scene.add(stampGroup);
+
+            androidStamps.push(stampGroup);
+        }
+
+        function spawnObstacleOrTarget() {
+            const zSpawn = -120;
+            const rand = Math.random();
+
+            if (rand < 0.4) {
+                const log = new THREE.Mesh(logGeo, logMat);
+                log.rotation.z = Math.PI / 2;
+                log.position.set((Math.random() - 0.5) * 2, 0.5, zSpawn);
+                scene.add(log);
+
+                obstacles.push({ mesh: log, type: 'jump', hitRadius: 0.8, box: new THREE.Box3() });
+            } else if (rand < 0.7) {
+                const branch = new THREE.Mesh(branchGeo, branchMat);
+                branch.position.set(0, 1.6, zSpawn);
+                scene.add(branch);
+
+                obstacles.push({ mesh: branch, type: 'duck', hitRadius: 0.8, box: new THREE.Box3() });
+            } else {
+                const targetGroup = new THREE.Group();
+
+                for (let i = 0; i < 3; i++) {
+                    const ring = new THREE.Mesh(targetRingGeos[i], targetRingMats[i]);
+                    ring.rotation.x = Math.PI / 2;
+                    targetGroup.add(ring);
+                }
+
+                targetGroup.position.set((Math.random() - 0.5) * 4, 1.4, zSpawn);
+                targetGroup.userData = { isHit: false, hitTimer: 0 };
+                scene.add(targetGroup);
+
+                targets.push(targetGroup);
+            }
+        }
+
+        function triggerJump() {
+            if (!isJumping && playerY <= PLAYER_NORMAL_HEIGHT + 0.05) {
+                playerYVelocity = JUMP_FORCE;
+                isJumping = true;
+                isDucking = false;
+            }
+        }
+
+        function triggerDuck() {
+            if (!isJumping) {
+                isDucking = true;
+                duckTimer = 0.7;
+            }
+        }
+
+        function throwAtTap(screenX, screenY) {
+            if (isDead) return;
+
+            raycaster.setFromCamera(new THREE.Vector2(screenX, screenY), camera);
+
+            let targetPoint = new THREE.Vector3();
+            const intersects = raycaster.intersectObjects(targets, true);
+
+            if (intersects.length > 0) {
+                targetPoint.copy(intersects[0].point);
+            } else {
+                targetPoint.copy(raycaster.ray.at(30, new THREE.Vector3()));
+            }
+
+            const knife = createKnifeModel();
+            knife.position.copy(camera.position).add(new THREE.Vector3(0.2, -0.3, -0.5));
+
+            const dir = targetPoint.clone().sub(knife.position).normalize();
+            const velocity = dir.multiplyScalar(45 * speedMultiplier);
+            const spinAxis = new THREE.Vector3(0, 1, 0).cross(dir).normalize();
+
+            scene.add(knife);
+            flyingKnives.push({
+                mesh: knife,
+                velocity: velocity,
+                life: 1.5,
+                spinAxis: spinAxis,
+                spinSpeed: 18.0,
+                isDeflected: false,
+                isStuck: false
+            });
+        }
+
+        function createKnifeModel() {
+            const knifeGroup = new THREE.Group();
+
+            const blade = new THREE.Mesh(knifeBladeGeo, knifeBladeMat);
+            blade.position.y = 0.31;
+            knifeGroup.add(blade);
+
+            const tip = new THREE.Mesh(knifeTipGeo, knifeBladeMat);
+            tip.rotation.y = Math.PI / 4;
+            tip.position.y = 0.645;
+            knifeGroup.add(tip);
+
+            const handle = new THREE.Mesh(knifeHandleGeo, knifeHandleMat);
+            handle.position.y = -0.19;
+            knifeGroup.add(handle);
+
+            const accent = new THREE.Mesh(knifeAccentGeo, knifeAccentMat);
+            accent.rotation.z = Math.PI / 2;
+            accent.position.set(0, -0.34, 0);
+            knifeGroup.add(accent);
+
+            knifeGroup.scale.set(1.2, 1.2, 1.2);
+            return knifeGroup;
+        }
+
+        function removeAndClearGroup(group) {
+            scene.remove(group);
+            while (group.children.length > 0) {
+                group.remove(group.children[0]);
+            }
+        }
+
+        function takeDamage() {
+            if (isDead) return;
+
+            elapsedTime = 0;
+
+            playerHealth = Math.max(0, playerHealth - 25);
+            healthValEl.textContent = playerHealth;
+
+            damageFlashEl.style.background = 'rgba(231, 76, 60, 0.5)';
+            setTimeout(() => {
+                damageFlashEl.style.background = 'rgba(231, 76, 60, 0)';
+            }, 150);
+
+            if (playerHealth <= 0) {
+                isDead = true;
+                wastedScreen.style.display = 'flex';
+                wastedScreen.style.pointerEvents = 'auto';
+                setTimeout(() => {
+                    wastedScreen.style.opacity = '1';
+                }, 10);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = Math.min((time - prevTime) / 1000, 0.1);
+            prevTime = time;
+
+            if (isNightMode && starGeo) {
+                const sizes = starGeo.attributes.size.array;
+                const timeSec = time * 0.003;
+                for (let i = 0; i < sizes.length; i++) {
+                    sizes[i] = starBaseSizes[i] * (0.4 + 0.6 * Math.sin(timeSec * 2.0 + starPhases[i]));
+                }
+                starGeo.attributes.size.needsUpdate = true;
+            }
+
+            if (isGameStarted && !isDead) {
+                elapsedTime += delta;
+                speedMultiplier = 1.0 + (elapsedTime / 40.0);
+                const currentRunSpeed = baseRunSpeed * speedMultiplier;
+
+                if (isJumping) {
+                    playerYVelocity -= GRAVITY * delta;
+                    playerY += playerYVelocity * delta;
+
+                    if (playerY <= PLAYER_NORMAL_HEIGHT) {
+                        playerY = PLAYER_NORMAL_HEIGHT;
+                        playerYVelocity = 0;
+                        isJumping = false;
+                    }
+                } else if (isDucking) {
+                    playerY = PLAYER_DUCK_HEIGHT;
+                    duckTimer -= delta;
+                    if (duckTimer <= 0) {
+                        isDucking = false;
+                        playerY = PLAYER_NORMAL_HEIGHT;
+                    }
+                } else {
+                    playerY = PLAYER_NORMAL_HEIGHT;
+                }
+
+                camera.position.y = playerY;
+                flashlight.position.copy(camera.position);
+
+                headLight.position.set(camera.position.x, Math.max(0.2, camera.position.y - 0.4), camera.position.z);
+                headLightTarget.position.set(camera.position.x, 0, camera.position.z - 18);
+
+                groundSegments.forEach(seg => {
+                    seg.position.z += currentRunSpeed * delta;
+                    if (seg.position.z > 30) {
+                        seg.position.z -= 300;
+                    }
+                });
+
+                androidStamps.forEach((stamp, index) => {
+                    stamp.position.z += currentRunSpeed * delta;
+                    if (stamp.position.z > 10) {
+                        removeAndClearGroup(stamp);
+                        androidStamps.splice(index, 1);
+                    }
+                });
+
+                spawnTimer += delta;
+                if (spawnTimer >= (1.1 / Math.sqrt(speedMultiplier))) {
+                    spawnTimer = 0;
+                    spawnObstacleOrTarget();
+                }
+
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obs = obstacles[i];
+                    obs.mesh.position.z += currentRunSpeed * delta;
+                    obs.box.setFromObject(obs.mesh);
+
+                    if (Math.abs(obs.mesh.position.z) < obs.hitRadius) {
+                        if (obs.type === 'jump' && playerY < 2.0) {
+                            takeDamage();
+                            scene.remove(obs.mesh);
+                            obstacles.splice(i, 1);
+                            continue;
+                        } else if (obs.type === 'duck' && playerY > 1.1) {
+                            takeDamage();
+                            scene.remove(obs.mesh);
+                            obstacles.splice(i, 1);
+                            continue;
+                        }
+                    }
+
+                    if (obs.mesh.position.z > 10) {
+                        scene.remove(obs.mesh);
+                        obstacles.splice(i, 1);
+                    }
+                }
+
+                for (let i = targets.length - 1; i >= 0; i--) {
+                    const tar = targets[i];
+                    tar.position.z += currentRunSpeed * delta;
+
+                    if (tar.userData.isHit) {
+                        tar.userData.hitTimer += delta;
+                        let scaleStep = 1.0 - (delta / 0.5);
+                        tar.scale.multiplyScalar(Math.max(0, scaleStep));
+
+                        if (tar.userData.hitTimer >= 0.5) {
+                            removeAndClearGroup(tar);
+                            targets.splice(i, 1);
+                            continue;
+                        }
+                    } else if (tar.position.z > 10) {
+                        removeAndClearGroup(tar);
+                        targets.splice(i, 1);
+                    }
+                }
+
+                for (let i = flyingKnives.length - 1; i >= 0; i--) {
+                    const fk = flyingKnives[i];
+
+                    if (fk.isStuck) {
+                        fk.mesh.position.z += currentRunSpeed * delta;
+
+                        if (fk.mesh.position.z > 6) {
+                            scene.remove(fk.mesh);
+                            flyingKnives.splice(i, 1);
+                        }
+                        continue;
+                    }
+
+                    if (fk.isDeflected) {
+                        fk.velocity.y -= 12 * delta;
+                    }
+
+                    fk.mesh.position.addScaledVector(fk.velocity, delta);
+                    fk.mesh.rotateOnWorldAxis(fk.spinAxis, fk.spinSpeed * delta);
+                    fk.life -= delta;
+
+                    if (fk.mesh.position.y <= 0.05) {
+                        fk.isStuck = true;
+                        fk.mesh.position.y = 0.0;
+                        fk.mesh.rotation.set(0, 0, 0);
+                        fk.mesh.rotation.x = Math.PI / 4;
+                        continue;
+                    }
+
+                    if (!fk.isDeflected) {
+                        for (let j = targets.length - 1; j >= 0; j--) {
+                            const tar = targets[j];
+                            if (!tar.userData.isHit && fk.mesh.position.distanceTo(tar.position) < 1.3) {
+                                tar.userData.isHit = true;
+                                score += 100;
+                                scoreValEl.textContent = score;
+
+                                // Increment target hit tracker and check for every 10 hits milestone
+                                targetHitsCount++;
+                                if (targetHitsCount % 10 === 0) {
+                                    spawnAndroidGroundStamp(targetHitsCount);
+                                }
+
+                                scene.remove(fk.mesh);
+                                flyingKnives.splice(i, 1);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!flyingKnives[i]) continue;
+
+                    if (!fk.isDeflected) {
+                        for (let k = 0; k < obstacles.length; k++) {
+                            const obs = obstacles[k];
+                            
+                            const isColliding = obs.type === 'duck' 
+                                ? (obs.box.containsPoint(fk.mesh.position) || Math.abs(fk.mesh.position.z - obs.mesh.position.z) < 0.6 && Math.abs(fk.mesh.position.y - obs.mesh.position.y) < 0.6)
+                                : (obs.box.containsPoint(fk.mesh.position) || fk.mesh.position.distanceTo(obs.mesh.position) < 1.2);
+
+                            if (isColliding) {
+                                fk.isDeflected = true;
+                                fk.life = Math.min(fk.life, 0.6);
+
+                                const normal = fk.mesh.position.clone().sub(obs.mesh.position).normalize();
+                                if (normal.lengthSq() === 0) normal.set(0, 1, 0);
+
+                                fk.velocity.reflect(normal).multiplyScalar(0.45);
+                                fk.velocity.z += 8;
+                                fk.velocity.y += 6 + Math.random() * 4;
+                                fk.velocity.x += (Math.random() - 0.5) * 12;
+
+                                fk.spinSpeed = 35.0;
+                                fk.spinAxis.set(Math.random(), Math.random(), Math.random()).normalize();
+                                break;
+                            }
+                        }
+                    }
+
+                    if (fk && fk.life <= 0) {
+                        scene.remove(fk.mesh);
+                        flyingKnives.splice(i, 1);
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>

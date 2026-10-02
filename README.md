@@ -1,2 +1,6 @@
 # PropHunt-RUN
-temple
+temple  
+
+![ic](ic.png)  
+
+![r](r.gif)   
