@@ -3,7 +3,7 @@ temple
 
 ![ic](ic.png)  
 
-![[record](recording.gif)   
+![record](recording.gif)   
 
 
 
